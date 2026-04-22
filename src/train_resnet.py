@@ -13,7 +13,7 @@ from models.resnet_cnn import LightweightResNet
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-epochs = 30
+epochs = 40
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 RESULTS_FILE = RESULTS_DIR / "resnet_metrics.csv"
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
