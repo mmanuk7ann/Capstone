@@ -11,6 +11,7 @@ from data_loader import (
 )
 from models.baseline_cnn import BaselineCNN
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 epochs = 30
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
@@ -44,7 +45,9 @@ if __name__ == "__main__":
     with open(CONFIG_FILE, "w", encoding="utf-8") as file:
         json.dump(config, file, indent=2)
 
-    baseline_model = BaselineCNN()
+    print(f"Training on: {device}")
+
+    baseline_model = BaselineCNN().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(baseline_model.parameters(), lr=LEARNING_RATE)
     best_accuracy = 0.0
@@ -53,6 +56,7 @@ if __name__ == "__main__":
         baseline_model.train()
         train_loss = 0.0
         for images, labels in train_loader:
+            images, labels = images.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = baseline_model(images)
             loss = criterion(outputs, labels)
@@ -66,6 +70,7 @@ if __name__ == "__main__":
         test_loss = 0.0
         with torch.no_grad():
             for images, labels in test_loader:
+                images, labels = images.to(device), labels.to(device)
                 outputs = baseline_model(images)
                 loss = criterion(outputs, labels)
                 test_loss += loss.item()
