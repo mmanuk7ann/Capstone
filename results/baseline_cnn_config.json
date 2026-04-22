@@ -1,0 +1,19 @@
+{
+  "model_name": "BaselineCNN",
+  "dataset": "CIFAR-10",
+  "epochs": 30,
+  "batch_size": 64,
+  "optimizer": "Adam",
+  "learning_rate": 0.001,
+  "loss_function": "CrossEntropyLoss",
+  "normalization_mean": [
+    0.4914,
+    0.4822,
+    0.4465
+  ],
+  "normalization_std": [
+    0.2023,
+    0.1994,
+    0.201
+  ]
+}

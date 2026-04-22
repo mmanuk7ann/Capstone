@@ -1,0 +1,6 @@
+data/
+models/
+__pycache__/
+*.pth
+*.tar.gz
+.DS_Store
