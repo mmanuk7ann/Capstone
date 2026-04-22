@@ -41,6 +41,7 @@ if __name__ == "__main__":
         "loss_function": "CrossEntropyLoss",
         "normalization_mean": list(NORMALIZE_MEAN),
         "normalization_std": list(NORMALIZE_STD),
+        "scheduler": "CosineAnnealingLR",
     }
     with open(CONFIG_FILE, "w", encoding="utf-8") as file:
         json.dump(config, file, indent=2)
@@ -50,6 +51,7 @@ if __name__ == "__main__":
     baseline_model = BaselineCNN().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(baseline_model.parameters(), lr=LEARNING_RATE)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     best_accuracy = 0.0
 
     for epoch in range(epochs):
@@ -84,6 +86,8 @@ if __name__ == "__main__":
 
         with open(RESULTS_FILE, "a", encoding="utf-8") as file:
             file.write(f"{epoch + 1},{avg_train_loss},{avg_test_loss},{accuracy}\n")
+
+        scheduler.step()
 
         if accuracy > best_accuracy:
             best_accuracy = accuracy

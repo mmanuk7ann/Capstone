@@ -14,6 +14,7 @@ class BaselineCNN(nn.Module):
         self.flatten = nn.Flatten()
         self.func1 = nn.Linear(64*8*8, 128)
         self.func2 = nn.Linear(128, 10)
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -29,6 +30,7 @@ class BaselineCNN(nn.Module):
         x = self.flatten(x)
         x = self.func1(x)
         x = self.relu(x)
+        x = self.dropout(x)
         x = self.func2(x)
 
         return x
