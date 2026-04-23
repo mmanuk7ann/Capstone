@@ -1,3 +1,5 @@
+import argparse
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,13 +17,23 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 epochs = 40
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
-RESULTS_FILE = RESULTS_DIR / "resnet_metrics.csv"
 MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
-BEST_MODEL_FILE = MODELS_DIR / "resnet_best.pth"
-FINAL_MODEL_FILE = MODELS_DIR / "resnet_final.pth"
-CONFIG_FILE = RESULTS_DIR / "resnet_config.json"
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+    RESULTS_FILE = RESULTS_DIR / f"resnet_seed{args.seed}_metrics.csv"
+    BEST_MODEL_FILE = MODELS_DIR / f"resnet_seed{args.seed}_best.pth"
+    FINAL_MODEL_FILE = MODELS_DIR / f"resnet_seed{args.seed}_final.pth"
+    CONFIG_FILE = RESULTS_DIR / f"resnet_seed{args.seed}_config.json"
+
     print("Train Samples: ", len(train_dataset))
     print("Tests Samples: ", len(test_dataset))
     print("Classes: ", classes)
@@ -42,6 +54,7 @@ if __name__ == "__main__":
         "normalization_mean": list(NORMALIZE_MEAN),
         "normalization_std": list(NORMALIZE_STD),
         "scheduler": "CosineAnnealingLR",
+        "seed": args.seed,
     }
     with open(CONFIG_FILE, "w", encoding="utf-8") as file:
         json.dump(config, file, indent=2)
@@ -50,7 +63,7 @@ if __name__ == "__main__":
 
     resnet_model = LightweightResNet().to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(resnet_model.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(resnet_model.parameters(), lr=LEARNING_RATE, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     best_accuracy = 0.0
 
