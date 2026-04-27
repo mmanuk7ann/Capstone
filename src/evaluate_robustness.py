@@ -11,8 +11,6 @@ from models.baseline_cnn import BaselineCNN
 from models.resnet_cnn import LightweightResNet
 from models.wider_cnn import WiderCNN
 
-MODELS_DIR = Path(__file__).resolve().parent.parent / "models"
-RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 MODEL_MAP = {
@@ -48,18 +46,19 @@ def make_corrupted_loader(corruption_type, severity):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, choices=MODEL_MAP.keys())
+    parser.add_argument("--weights", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Evaluating on: {device}")
 
     model = MODEL_MAP[args.model]().to(device)
-    weights_path = MODELS_DIR / f"{args.model}_best.pth"
-    model.load_state_dict(torch.load(weights_path, map_location=device))
-    print(f"Loaded weights from {weights_path}")
+    model.load_state_dict(torch.load(args.weights, map_location=device))
+    print(f"Loaded weights from {args.weights}")
 
-    RESULTS_DIR.mkdir(exist_ok=True)
-    results_file = RESULTS_DIR / f"{args.model}_robustness.csv"
+    args.output.parent.mkdir(exist_ok=True)
+    results_file = args.output
 
     with open(results_file, "w", encoding="utf-8") as f:
         f.write("corruption_type,severity,accuracy\n")
