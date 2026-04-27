@@ -1,3 +1,4 @@
+import argparse
 import csv
 from pathlib import Path
 
@@ -55,8 +56,13 @@ def plot_corruption_lines(data, corruption_type, out_path):
     ax.set_xlabel("Severity")
     ax.set_ylabel("Accuracy")
     ax.set_xticks([1, 2, 3, 4, 5])
+    ax.set_ylim(0, 1)
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
     ax.grid(True)
+    if corruption_type == "brightness":
+        ax.axvline(x=3.5, color="gray", linestyle="--", linewidth=1)
+        ax.text(2.25, 0.03, "darkening", ha="center", va="bottom", fontsize=8, color="gray")
+        ax.text(4.75, 0.03, "brightening", ha="center", va="bottom", fontsize=8, color="gray")
     ax.legend()
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
@@ -115,21 +121,41 @@ def plot_heatmap(rows, model, out_path):
     plt.close(fig)
 
 
+ALL_PLOTS = (
+    list(CORRUPTION_TITLES.keys())
+    + ["clean"]
+    + [f"heatmap_{m}" for m in CSV_FILES]
+)
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--plots", nargs="+", choices=ALL_PLOTS, default=None,
+        metavar="PLOT",
+        help=f"Which plots to generate. Choices: {ALL_PLOTS}. Default: all.",
+    )
+    args = parser.parse_args()
+    plots_to_run = set(args.plots) if args.plots else set(ALL_PLOTS)
+
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
     data = {model: load_csv(path) for model, path in CSV_FILES.items()}
 
     for corruption_type in CORRUPTION_TITLES:
+        if corruption_type not in plots_to_run:
+            continue
         out = FIGURES_DIR / f"corruption_{corruption_type}.png"
         plot_corruption_lines(data, corruption_type, out)
         print(f"Saved {out.name}")
 
-    out = FIGURES_DIR / "clean_accuracy.png"
-    plot_clean_bar(data, out)
-    print(f"Saved {out.name}")
+    if "clean" in plots_to_run:
+        out = FIGURES_DIR / "clean_accuracy.png"
+        plot_clean_bar(data, out)
+        print(f"Saved {out.name}")
 
     for model, rows in data.items():
+        if f"heatmap_{model}" not in plots_to_run:
+            continue
         out = FIGURES_DIR / f"heatmap_{model}.png"
         plot_heatmap(rows, model, out)
         print(f"Saved {out.name}")
