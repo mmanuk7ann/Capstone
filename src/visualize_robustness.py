@@ -9,22 +9,43 @@ import numpy as np
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"
 FIGURES_DIR = RESULTS_DIR / "figures"
 
+MODELS = ["baseline_cnn", "resnet", "wider_cnn"]
+STRATEGIES = ["baseline", "stdaug", "degaug"]
+
 CSV_FILES = {
-    "baseline_cnn": RESULTS_DIR / "baseline_cnn_robustness_seed42.csv",
-    "resnet":       RESULTS_DIR / "resnet_robustness_seed123.csv",
-    "wider_cnn":    RESULTS_DIR / "wider_cnn_robustness_seed456.csv",
+    ("baseline_cnn", "baseline"): RESULTS_DIR / "baseline_cnn_robustness_seed42.csv",
+    ("resnet",        "baseline"): RESULTS_DIR / "resnet_robustness_seed123.csv",
+    ("wider_cnn",     "baseline"): RESULTS_DIR / "wider_cnn_robustness_seed456.csv",
+    ("baseline_cnn",  "stdaug"):   RESULTS_DIR / "baseline_cnn_stdaug_robustness.csv",
+    ("resnet",        "stdaug"):   RESULTS_DIR / "resnet_stdaug_robustness.csv",
+    ("wider_cnn",     "stdaug"):   RESULTS_DIR / "wider_cnn_stdaug_robustness.csv",
+    ("baseline_cnn",  "degaug"):   RESULTS_DIR / "baseline_cnn_degaug_robustness.csv",
+    ("resnet",        "degaug"):   RESULTS_DIR / "resnet_degaug_robustness.csv",
+    ("wider_cnn",     "degaug"):   RESULTS_DIR / "wider_cnn_degaug_robustness.csv",
 }
 
-COLORS = {
-    "baseline_cnn": "blue",
-    "resnet":       "orange",
-    "wider_cnn":    "green",
-}
-
-LABELS = {
+MODEL_LABELS = {
     "baseline_cnn": "BaselineCNN",
     "resnet":       "LightweightResNet",
     "wider_cnn":    "WiderCNN",
+}
+
+STRATEGY_LABELS = {
+    "baseline": "Baseline",
+    "stdaug":   "Std Aug",
+    "degaug":   "Deg Aug",
+}
+
+STRATEGY_STYLES = {
+    "baseline": {"color": "blue",   "linestyle": "-"},
+    "stdaug":   {"color": "orange", "linestyle": "--"},
+    "degaug":   {"color": "green",  "linestyle": ":"},
+}
+
+MODEL_COLORS = {
+    "baseline_cnn": "steelblue",
+    "resnet":       "darkorange",
+    "wider_cnn":    "forestgreen",
 }
 
 CORRUPTION_TITLES = {
@@ -34,6 +55,9 @@ CORRUPTION_TITLES = {
     "resolution_reduction": "Resolution Reduction",
     "brightness":           "Brightness Change",
 }
+
+CORRUPTION_TYPES = list(CORRUPTION_TITLES.keys())
+SEVERITIES = [1, 2, 3, 4, 5]
 
 
 def load_csv(path):
@@ -46,16 +70,20 @@ def load_csv(path):
     return rows
 
 
-def plot_corruption_lines(data, corruption_type, out_path):
+# ── Plot type 1: line plots (model × corruption type, 3 strategy lines each) ──
+
+def plot_model_corruption_strategies(data, model, corruption_type, out_path):
     fig, ax = plt.subplots(figsize=(7, 5))
-    for model, rows in data.items():
-        severities = [1, 2, 3, 4, 5]
-        accuracies = [rows[(corruption_type, s)] for s in severities]
-        ax.plot(severities, accuracies, marker="o", color=COLORS[model], label=LABELS[model])
-    ax.set_title(CORRUPTION_TITLES[corruption_type])
+    for strategy in STRATEGIES:
+        rows = data[(model, strategy)]
+        accuracies = [rows[(corruption_type, s)] for s in SEVERITIES]
+        style = STRATEGY_STYLES[strategy]
+        ax.plot(SEVERITIES, accuracies, marker="o",
+                label=STRATEGY_LABELS[strategy], **style)
+    ax.set_title(f"{MODEL_LABELS[model]} — {CORRUPTION_TITLES[corruption_type]}")
     ax.set_xlabel("Severity")
     ax.set_ylabel("Accuracy")
-    ax.set_xticks([1, 2, 3, 4, 5])
+    ax.set_xticks(SEVERITIES)
     ax.set_ylim(0, 1)
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
     ax.grid(True)
@@ -69,93 +97,110 @@ def plot_corruption_lines(data, corruption_type, out_path):
     plt.close(fig)
 
 
-def plot_clean_bar(data, out_path):
-    models = list(data.keys())
-    accuracies = [data[m][("clean", 0)] for m in models]
-    x = np.arange(len(models))
-    fig, ax = plt.subplots(figsize=(6, 5))
-    bars = ax.bar(x, accuracies, color=[COLORS[m] for m in models], width=0.5)
-    ax.set_title("Clean Accuracy")
-    ax.set_xlabel("Model")
-    ax.set_ylabel("Accuracy")
+# ── Plot type 2: bar chart per corruption type (9 bars grouped by strategy) ──
+
+def plot_corruption_strategy_comparison(data, corruption_type, out_path):
+    n_models = len(MODELS)
+    group_width = 0.7
+    bar_width = group_width / n_models
+    x = np.arange(len(STRATEGIES))
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    for i, model in enumerate(MODELS):
+        offsets = x - group_width / 2 + (i + 0.5) * bar_width
+        heights = [
+            np.mean([data[(model, strategy)][(corruption_type, s)] for s in SEVERITIES])
+            for strategy in STRATEGIES
+        ]
+        ax.bar(offsets, heights, bar_width * 0.9,
+               color=MODEL_COLORS[model], label=MODEL_LABELS[model])
+
+    ax.set_title(f"{CORRUPTION_TITLES[corruption_type]} — Strategy Comparison")
+    ax.set_xlabel("Training Strategy")
+    ax.set_ylabel("Mean Accuracy (severities 1–5)")
     ax.set_xticks(x)
-    ax.set_xticklabels([LABELS[m] for m in models])
+    ax.set_xticklabels([STRATEGY_LABELS[s] for s in STRATEGIES])
+    ax.set_ylim(0, 1)
     ax.yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1.0))
     ax.grid(True, axis="y")
-    for bar, acc in zip(bars, accuracies):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + 0.002,
-            f"{acc:.3f}",
-            ha="center", va="bottom", fontsize=9,
-        )
+    ax.legend()
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
 
 
-def plot_heatmap(rows, model, out_path):
-    corruption_types = list(CORRUPTION_TITLES.keys())
-    severities = [1, 2, 3, 4, 5]
+# ── Plot type 3: overall 3×3 heatmap (model × strategy, mean over all corruptions) ──
+
+def plot_overall_heatmap(data, out_path):
     matrix = np.array([
-        [rows[(ct, s)] for s in severities]
-        for ct in corruption_types
+        [
+            np.mean([
+                data[(model, strategy)][(ct, s)]
+                for ct in CORRUPTION_TYPES
+                for s in SEVERITIES
+            ])
+            for strategy in STRATEGIES
+        ]
+        for model in MODELS
     ])
-    fig, ax = plt.subplots(figsize=(7, 5))
+
+    fig, ax = plt.subplots(figsize=(7, 4))
     im = ax.imshow(matrix, aspect="auto", cmap="RdYlGn", vmin=0.0, vmax=1.0)
-    ax.set_title(f"{LABELS[model]} — Corruption Accuracy")
-    ax.set_xlabel("Severity")
-    ax.set_ylabel("Corruption Type")
-    ax.set_xticks(range(len(severities)))
-    ax.set_xticklabels(severities)
-    ax.set_yticks(range(len(corruption_types)))
-    ax.set_yticklabels([CORRUPTION_TITLES[ct] for ct in corruption_types])
-    for i in range(len(corruption_types)):
-        for j in range(len(severities)):
-            ax.text(j, i, f"{matrix[i, j]:.2f}", ha="center", va="center", fontsize=8)
+    ax.set_title("Mean Corruption Accuracy — Model × Strategy")
+    ax.set_xlabel("Training Strategy")
+    ax.set_ylabel("Model")
+    ax.set_xticks(range(len(STRATEGIES)))
+    ax.set_xticklabels([STRATEGY_LABELS[s] for s in STRATEGIES])
+    ax.set_yticks(range(len(MODELS)))
+    ax.set_yticklabels([MODEL_LABELS[m] for m in MODELS])
+    for i in range(len(MODELS)):
+        for j in range(len(STRATEGIES)):
+            ax.text(j, i, f"{matrix[i, j]:.3f}",
+                    ha="center", va="center", fontsize=11)
     cbar = fig.colorbar(im, ax=ax)
-    cbar.set_label("Accuracy")
-    ax.grid(False)
+    cbar.set_label("Mean Accuracy")
     fig.tight_layout()
     fig.savefig(out_path, dpi=150)
     plt.close(fig)
 
 
-ALL_PLOTS = (
-    list(CORRUPTION_TITLES.keys())
-    + ["clean"]
-    + [f"heatmap_{m}" for m in CSV_FILES]
-)
+# ── Plot registry for --plots filtering ──
+
+LINE_PLOT_KEYS = [f"{m}_{ct}" for m in MODELS for ct in CORRUPTION_TYPES]
+BAR_PLOT_KEYS  = [f"{ct}_comparison" for ct in CORRUPTION_TYPES]
+ALL_PLOTS = LINE_PLOT_KEYS + BAR_PLOT_KEYS + ["overall_heatmap"]
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--plots", nargs="+", choices=ALL_PLOTS, default=None,
         metavar="PLOT",
-        help=f"Which plots to generate. Choices: {ALL_PLOTS}. Default: all.",
+        help=f"Which plots to generate. Default: all. Choices: {ALL_PLOTS}",
     )
     args = parser.parse_args()
     plots_to_run = set(args.plots) if args.plots else set(ALL_PLOTS)
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 
-    data = {model: load_csv(path) for model, path in CSV_FILES.items()}
+    data = {key: load_csv(path) for key, path in CSV_FILES.items()}
 
-    for corruption_type in CORRUPTION_TITLES:
-        if corruption_type not in plots_to_run:
+    for model in MODELS:
+        for corruption_type in CORRUPTION_TYPES:
+            if f"{model}_{corruption_type}" not in plots_to_run:
+                continue
+            out = FIGURES_DIR / f"{model}_{corruption_type}_strategies.png"
+            plot_model_corruption_strategies(data, model, corruption_type, out)
+            print(f"Saved {out.name}")
+
+    for corruption_type in CORRUPTION_TYPES:
+        if f"{corruption_type}_comparison" not in plots_to_run:
             continue
-        out = FIGURES_DIR / f"corruption_{corruption_type}.png"
-        plot_corruption_lines(data, corruption_type, out)
+        out = FIGURES_DIR / f"{corruption_type}_strategy_comparison.png"
+        plot_corruption_strategy_comparison(data, corruption_type, out)
         print(f"Saved {out.name}")
 
-    if "clean" in plots_to_run:
-        out = FIGURES_DIR / "clean_accuracy.png"
-        plot_clean_bar(data, out)
-        print(f"Saved {out.name}")
-
-    for model, rows in data.items():
-        if f"heatmap_{model}" not in plots_to_run:
-            continue
-        out = FIGURES_DIR / f"heatmap_{model}.png"
-        plot_heatmap(rows, model, out)
+    if "overall_heatmap" in plots_to_run:
+        out = FIGURES_DIR / "overall_mean_accuracy_heatmap.png"
+        plot_overall_heatmap(data, out)
         print(f"Saved {out.name}")
