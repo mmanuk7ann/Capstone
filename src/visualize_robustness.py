@@ -14,8 +14,8 @@ STRATEGIES = ["baseline", "stdaug", "degaug"]
 
 CSV_FILES = {
     ("baseline_cnn", "baseline"): RESULTS_DIR / "baseline_cnn_robustness_seed42.csv",
-    ("resnet",        "baseline"): RESULTS_DIR / "resnet_robustness_seed123.csv",
-    ("wider_cnn",     "baseline"): RESULTS_DIR / "wider_cnn_robustness_seed456.csv",
+    ("resnet",        "baseline"): RESULTS_DIR / "resnet_robustness_seed42.csv",
+    ("wider_cnn",     "baseline"): RESULTS_DIR / "wider_cnn_robustness_seed42.csv",
     ("baseline_cnn",  "stdaug"):   RESULTS_DIR / "baseline_cnn_stdaug_robustness.csv",
     ("resnet",        "stdaug"):   RESULTS_DIR / "resnet_stdaug_robustness.csv",
     ("wider_cnn",     "stdaug"):   RESULTS_DIR / "wider_cnn_stdaug_robustness.csv",

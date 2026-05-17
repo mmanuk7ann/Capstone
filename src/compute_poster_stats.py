@@ -24,8 +24,8 @@ SEVERITIES = [1, 2, 3, 4, 5]
 STRATEGY_FILES = {
     "Baseline": [
         RESULTS_DIR / "baseline_cnn_robustness_seed42.csv",
-        RESULTS_DIR / "resnet_robustness_seed123.csv",
-        RESULTS_DIR / "wider_cnn_robustness_seed456.csv",
+        RESULTS_DIR / "resnet_robustness_seed42.csv",
+        RESULTS_DIR / "wider_cnn_robustness_seed42.csv",
     ],
     "StdAug": [
         RESULTS_DIR / "baseline_cnn_stdaug_robustness.csv",
@@ -39,7 +39,7 @@ STRATEGY_FILES = {
     ],
 }
 
-WIDER_CNN_BASELINE_FILE = RESULTS_DIR / "wider_cnn_robustness_seed456.csv"
+WIDER_CNN_BASELINE_FILE = RESULTS_DIR / "wider_cnn_robustness_seed42.csv"
 
 STRATEGIES = ["Baseline", "StdAug", "DegAug"]
 
